@@ -1,36 +1,177 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MedBell Admin
 
-## Getting Started
+Operations console for [MedBell](https://medbell.app), the medication-reminder app.
 
-First, run the development server:
+It is a **pure interface** over the existing Firebase project `pill-reminder-e8f19`.
+There is no database of its own, no ORM, and no business logic: every figure it
+shows is computed by a deployed Cloud Function or read from Firestore as-is, and
+every change it makes goes through a callable that re-checks permissions,
+recomputes money from stored data, and appends an immutable audit entry.
+
+## Stack
+
+- Next.js 16 (App Router) · React 19 · TypeScript
+- Tailwind CSS v4 with shadcn/ui-style primitives
+- TanStack Query for client caching
+- Firebase Auth + Firebase Admin SDK
+- Deployed on Vercel
+
+## Authorisation model
+
+Access is the **`medbellAdmin` custom claim** and nothing else. There is
+deliberately no `isAdmin` database field: the claim is settable only by the
+`setAdminRole` Cloud Function, and it is what the Firestore security rules
+themselves check.
+
+The claim is enforced in three places, and only the last two grant anything:
+
+| Layer | File | What it does | Trusted? |
+|---|---|---|---|
+| Routing | [proxy.ts](proxy.ts) | Decodes the session cookie *without verifying it* and decides console vs `/login` | **No** — routing hint only |
+| Rendering | [app/(admin)/layout.tsx](app/(admin)/layout.tsx) | `verifySessionCookie(..., checkRevoked)` then reads the claim off the verified token | Yes |
+| Data | [lib/auth/route-guard.ts](lib/auth/route-guard.ts) | Same verification at the top of every route handler | Yes |
+
+A forged cookie therefore reaches a shell that immediately refuses it. This is
+verifiable: a JWT carrying `medbellAdmin: true` and a junk signature gets past
+the proxy and is then bounced to `/login`, while `/api/patients/<uid>` answers
+`401`.
+
+Sign-in mints an HttpOnly session cookie via `POST /api/session`, which only
+issues one for an ID token Google signed that already carries the claim.
+
+## Read and write paths
+
+Everything is typed from [docs/ADMIN_API.md](docs/ADMIN_API.md), which was
+written from the deployed source. Where this console disagreed with that
+document, the document won.
+
+**Reads** are split by what the data is:
+
+- *Programme and directory data* — the callables, called from the browser
+  through TanStack Query so each callable's own error message reaches the
+  operator verbatim.
+- *Clinical and care-circle data* — `GET /api/patients/[uid]`, a route handler
+  that reads Firestore with the Admin SDK after re-verifying the claim
+  ([lib/data/patient.ts](lib/data/patient.ts)). Read-only by construction: the
+  module contains queries and no writes, and the route has no `POST`/`PATCH`/`DELETE`.
+
+**Writes** go through `httpsCallable` in `us-central1` and nowhere else. All 27
+admin callables are wired; `claimAdminRole` is deliberately not, since it is a
+one-shot bootstrap fuse. The console never writes to Firestore.
+
+### Owner fields
+
+Not uniform, and not guessed — the clinical collections predate the referral
+system, which was written against `userId`:
+
+| Collection | Owner field |
+|---|---|
+| `medications`, `medicationLogs`, `appointments` | `patientId` |
+| `vitals/{patientId}/records`, `vitalReminderPlans/{patientId}/plans` | path segment |
+| `careRelationships` | `patientId` + `caregiverId` (doc id joins them with `_`) |
+| `connectionRequests` | `createdBy`, `patientId`, `caregiverId` |
+| `subscriptions`, `referral_transactions` | `userId` |
+| `users/{uid}` | document id |
+
+### Paging
+
+Only `listAppUsers` has a cursor (`pageToken`). Every other list takes a `limit`
+and returns a plain array, so "load more" raises the limit
+([hooks/use-limit.ts](hooks/use-limit.ts)) and the footer says out loud when the
+server's cap of 200 is reached rather than implying there is nothing further.
+
+`listReferredUsers` and `listPartnerPayouts` require a `partnerId`, so those
+screens ask for one instead of firing a request that would fail. `listPartners`
+and `listReferralAudit` have no search or action filter, so the filtering on
+those screens runs over the loaded rows and is labelled as such.
+
+## Money
+
+All amounts are **integer minor units**. `lib/money.ts` is the only place a
+value is divided by 100, and only to build a display string; sums use integer
+addition and operator input is parsed from its decimal string rather than
+through `parseFloat`.
+
+Balances are keyed by currency and are never summed across them — a partner can
+hold more than one, and adding INR to USD would be a lie. `payableMinor`
+(pending + approved) is legitimately **negative** when a refund reverses
+commission already paid out; it is surfaced in a warning tone, never clamped.
+
+Payout amounts are never sent from the client: `markCommissionsPaid` takes ids
+and settlement detail only, and the returned `amountMinor` is what gets shown
+afterwards. `updatePartnerPayout` edits the settlement record alone — voiding is
+the only thing that moves money back.
+
+## Two contract details that bite
+
+**Update callables are patches, not snapshots.** An omitted key leaves the stored
+value alone; an explicit `null` clears it. The trap is that `undefined` does *not*
+omit a key over this transport — `@firebase/functions` `encode()` walks own
+enumerable keys and turns `undefined` into `null`, so `{ email: undefined }`
+arrives as `{ email: null }` and **clears the field**. Every form therefore builds
+its payload through [lib/api/patch.ts](lib/api/patch.ts), which produces
+`undefined` for "unchanged" and then physically strips those keys.
+
+**Timestamps are epoch milliseconds.** `serialize()` converts every Firestore
+`Timestamp` in a callable response, recursively, including inside nested maps
+and arrays. Direct Firestore reads are the exception — they hand back
+`Timestamp` objects — so [lib/data/serialize.ts](lib/data/serialize.ts)
+normalises them to the same convention and the client has one representation
+rather than three.
+
+## Rules the UI states because the backend enforces them
+
+- Discount percentages and the commission rate come from `getReferralConfig`
+  under `defaults` and are **not** writable — `updateReferralConfig` accepts only
+  the store mapping, so the settings screen shows them read-only rather than as
+  inputs that would silently do nothing.
+- Commission applies to every successful transaction, **including full-price
+  renewals**; discounts apply to the first payment only.
+- Attribution locks to one partner on first purchase, and each user redeems at
+  most one discount ever.
+- A code can be `active` and still unusable — past its end date, not yet started,
+  or at its redemption cap. The codes list shows that distinction.
+- Only `pending` and `approved` rows are payable, a payout is single-currency,
+  and at most 400 rows go in one call.
+- Admin access to patient data is read-only; `deleteAppUser` removes the account
+  and profile but preserves medications, dose logs, vitals and appointments.
+- The backend refuses to let an admin disable, delete or de-admin themselves.
+
+## Local setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.example .env.local   # then fill it in
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.local` needs the Firebase web config (`NEXT_PUBLIC_FIREBASE_*`) and an
+Admin SDK service account (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`,
+`FIREBASE_PRIVATE_KEY`). See [.env.example](.env.example) for where each value
+comes from.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+To sign in you need an account carrying `medbellAdmin`. If none exists yet, an
+existing admin grants it from **Console admins**, or it is set directly with the
+`setAdminRole` callable.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploying to Vercel
 
-## Learn More
+Add the same variables as Vercel Environment Variables — the service-account
+values are secrets and must never carry a `NEXT_PUBLIC_` prefix. `FIREBASE_PRIVATE_KEY`
+may be pasted with escaped `\n`; the app restores the newlines.
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm dev      # Turbopack dev server
+pnpm build    # production build
+pnpm lint     # ESLint (flat config)
+pnpm test     # contract tests (Node's built-in runner, no extra dependency)
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`pnpm test` covers the three places where a silent regression would be
+expensive: integer-paise arithmetic and parsing, the omit-vs-clear patch
+semantics of the update callables, and the epoch-millis timestamp contract
+(including the adherence window). It runs project modules directly via
+`--experimental-strip-types` plus a small `@/` alias resolver in
+[scripts/](scripts/), so the tests import exactly what the app imports.

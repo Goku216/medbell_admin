@@ -1,26 +1,174 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * MedBell admin console design tokens.
+ * Light is the working default; the console is read-heavy so the palette stays
+ * low-chroma with a single teal accent lifted from the MedBell product.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --radius: 0.625rem;
+
+  --background: oklch(0.985 0.002 247);
+  --foreground: oklch(0.21 0.02 258);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.02 258);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.02 258);
+
+  --primary: oklch(0.58 0.11 195);
+  --primary-foreground: oklch(0.99 0.01 195);
+
+  --secondary: oklch(0.968 0.005 247);
+  --secondary-foreground: oklch(0.28 0.03 258);
+
+  --muted: oklch(0.968 0.005 247);
+  --muted-foreground: oklch(0.552 0.02 257);
+
+  --accent: oklch(0.955 0.015 195);
+  --accent-foreground: oklch(0.33 0.06 195);
+
+  --destructive: oklch(0.577 0.223 27.3);
+  --destructive-foreground: oklch(0.985 0 0);
+
+  --success: oklch(0.62 0.14 152);
+  --success-foreground: oklch(0.99 0.01 152);
+
+  --warning: oklch(0.72 0.15 75);
+  --warning-foreground: oklch(0.26 0.05 75);
+
+  --border: oklch(0.923 0.005 256);
+  --input: oklch(0.923 0.005 256);
+  --ring: oklch(0.58 0.11 195);
+
+  --sidebar: oklch(0.99 0.002 247);
+  --sidebar-foreground: oklch(0.21 0.02 258);
+  --sidebar-border: oklch(0.923 0.005 256);
+  --sidebar-accent: oklch(0.955 0.015 195);
+  --sidebar-accent-foreground: oklch(0.33 0.06 195);
+
+  /*
+   * Chart series. Slots 1 and 3 of the validated categorical order (blue,
+   * aqua) — checked with the palette validator against both surfaces:
+   * adjacent CVD dE 23.1 light / 19.6 dark, normal-vision 24.0 / 20.9.
+   * Aqua sits at 2.74:1 on the light surface, so every chart using it also
+   * ships direct labels and a table view (the relief rule).
+   */
+  --chart-1: #2a78d6;
+  --chart-2: #1baf7a;
+  --chart-grid: oklch(0.923 0.005 256);
+  --chart-surface: oklch(1 0 0);
+}
+
+.dark {
+  --background: oklch(0.16 0.012 258);
+  --foreground: oklch(0.96 0.004 247);
+
+  --card: oklch(0.204 0.014 258);
+  --card-foreground: oklch(0.96 0.004 247);
+
+  --popover: oklch(0.226 0.015 258);
+  --popover-foreground: oklch(0.96 0.004 247);
+
+  --primary: oklch(0.72 0.11 195);
+  --primary-foreground: oklch(0.19 0.03 195);
+
+  --secondary: oklch(0.26 0.015 258);
+  --secondary-foreground: oklch(0.96 0.004 247);
+
+  --muted: oklch(0.26 0.015 258);
+  --muted-foreground: oklch(0.68 0.015 257);
+
+  --accent: oklch(0.29 0.03 195);
+  --accent-foreground: oklch(0.9 0.06 195);
+
+  --destructive: oklch(0.65 0.19 26);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  --success: oklch(0.7 0.13 152);
+  --success-foreground: oklch(0.18 0.04 152);
+
+  --warning: oklch(0.78 0.13 75);
+  --warning-foreground: oklch(0.22 0.05 75);
+
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.72 0.11 195);
+
+  --sidebar: oklch(0.186 0.013 258);
+  --sidebar-foreground: oklch(0.96 0.004 247);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-accent: oklch(0.29 0.03 195);
+  --sidebar-accent-foreground: oklch(0.9 0.06 195);
+
+  /* Same two hues, re-stepped for the dark surface — not an automatic flip. */
+  --chart-1: #3987e5;
+  --chart-2: #199e70;
+  --chart-grid: oklch(1 0 0 / 12%);
+  --chart-surface: oklch(0.204 0.014 258);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-surface: var(--chart-surface);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    border-color: var(--border);
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Money and identifiers are compared column-to-column all over this console. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
 }
