@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // The console handles patient data and money. It is never embedded, never
-  // indexed, and never needs the browser features below.
+  serverExternalPackages: ["firebase-admin", "jwks-rsa", "jose"],
+
   async headers() {
     return [
       {
