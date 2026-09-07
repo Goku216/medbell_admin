@@ -2,6 +2,9 @@
 
 Operations console for [MedBell](https://medbell.app), the medication-reminder app.
 
+Two audiences, one deployment: the **partner portal** at `/` and the **admin
+console** behind `/admin/login`.
+
 It is a **pure interface** over the existing Firebase project `pill-reminder-e8f19`.
 There is no database of its own, no ORM, and no business logic: every figure it
 shows is computed by a deployed Cloud Function or read from Firestore as-is, and
@@ -16,6 +19,22 @@ recomputes money from stored data, and appends an immutable audit entry.
 - Firebase Auth + Firebase Admin SDK
 - Deployed on Vercel
 
+## Routes
+
+| Path | Who | Credential |
+|---|---|---|
+| `/` | Partners | Sign-in page. The home page belongs to partners — they arrive from a referral link or a phone bookmark. |
+| `/partner/*` | Partners | Dashboard, link, customers, earnings, payments, account. Gated client-side on the `medbellPartner` claim. |
+| `/admin/login` | Administrators | Reached from the green marker in the corner of `/`. |
+| `/dashboard`, `/users`, `/referrals/*`, `/admins` | Administrators | Gated on the `medbellAdmin` claim. |
+
+`/login` and `/partner/login` redirect to their new homes, so existing bookmarks
+still work.
+
+The marker on the home page is discreet, not secret: the console is protected by
+the claim, never by its address being hard to find. It is a real link with an
+accessible name, reachable by keyboard, and it reveals its label on focus.
+
 ## Authorisation model
 
 Access is the **`medbellAdmin` custom claim** and nothing else. There is
@@ -27,13 +46,13 @@ The claim is enforced in three places, and only the last two grant anything:
 
 | Layer | File | What it does | Trusted? |
 |---|---|---|---|
-| Routing | [proxy.ts](proxy.ts) | Decodes the session cookie *without verifying it* and decides console vs `/login` | **No** — routing hint only |
+| Routing | [proxy.ts](proxy.ts) | Decodes the session cookie *without verifying it* and decides console vs `/admin/login` | **No** — routing hint only |
 | Rendering | [app/(admin)/layout.tsx](app/(admin)/layout.tsx) | `verifySessionCookie(..., checkRevoked)` then reads the claim off the verified token | Yes |
 | Data | [lib/auth/route-guard.ts](lib/auth/route-guard.ts) | Same verification at the top of every route handler | Yes |
 
 A forged cookie therefore reaches a shell that immediately refuses it. This is
 verifiable: a JWT carrying `medbellAdmin: true` and a junk signature gets past
-the proxy and is then bounced to `/login`, while `/api/patients/<uid>` answers
+the proxy and is then bounced to `/admin/login`, while `/api/patients/<uid>` answers
 `401`.
 
 Sign-in mints an HttpOnly session cookie via `POST /api/session`, which only

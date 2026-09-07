@@ -96,6 +96,45 @@ export function useUpdatePartner() {
   });
 }
 
+/* --------------------------------------------------- partner portal logins */
+
+export function usePartnerLogin(partnerId: string | null | undefined) {
+  return useQuery({
+    queryKey: queryKeys.referral.partnerLogin(partnerId ?? ""),
+    queryFn: () => api.getPartnerLogin({ partnerId: partnerId as string }),
+    enabled: Boolean(partnerId),
+  });
+}
+
+function usePartnerLoginMutation<TVariables, TData>(
+  mutationFn: (input: TVariables) => Promise<TData>,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: (_data, variables) => {
+      const partnerId = (variables as { partnerId?: string }).partnerId;
+      if (partnerId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.referral.partnerLogin(partnerId),
+        });
+      }
+    },
+  });
+}
+
+export function useCreatePartnerLogin() {
+  return usePartnerLoginMutation(api.createPartnerLogin);
+}
+
+export function useUpdatePartnerLogin() {
+  return usePartnerLoginMutation(api.updatePartnerLogin);
+}
+
+export function useDeletePartnerLogin() {
+  return usePartnerLoginMutation(api.deletePartnerLogin);
+}
+
 /* ----------------------------------------------------------------- codes */
 
 export function useReferralCodes(

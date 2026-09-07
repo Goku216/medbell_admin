@@ -125,6 +125,51 @@ export type SetAdminRoleResponse = {
   admin: boolean;
 };
 
+/* --------------------------------------------------- partner portal logins */
+
+/**
+ * A partner login is an optional Firebase Auth account attached to one partner,
+ * created by an administrator. It carries `medbellPartner` and
+ * `medbellPartnerId` claims, and those claims are the whole authorisation model
+ * for the portal.
+ *
+ * Partners sign in with a username, not an email: the username is turned into
+ * `<username>@<REFERRAL_PARTNER_LOGIN_DOMAIN>` internally. That address is not
+ * a mailbox — no mail is ever sent to it and there is no self-service reset.
+ */
+export type PartnerLogin = {
+  uid: string;
+  username: string;
+  loginEmail: string;
+  disabled: boolean;
+  createdAt: number | null;
+  lastSignInAt: number | null;
+};
+
+export type GetPartnerLoginResponse = {
+  partnerId: string;
+  hasLogin: boolean;
+  login: PartnerLogin | null;
+  /** The partner points at an Auth account that no longer exists. */
+  orphaned?: boolean;
+};
+
+export type CreatePartnerLoginResponse = {
+  partnerId: string;
+  uid: string;
+  username: string;
+  loginEmail: string;
+};
+
+export type UpdatePartnerLoginResponse = {
+  partnerId: string;
+  uid: string;
+  username: string;
+  loginEmail: string;
+  disabled: boolean;
+  passwordChanged: boolean;
+};
+
 /* --------------------------------------------------------------- partners */
 
 export type PartnerTotals = {

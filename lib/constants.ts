@@ -10,7 +10,18 @@ export const SESSION_COOKIE_NAME = "medbell_admin_session" as const;
 /** Firebase session cookies max out at 14 days. */
 export const SESSION_COOKIE_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 
-export const LOGIN_PATH = "/login";
+/**
+ * The home page is the partner sign-in: partners are the public audience, and
+ * they arrive from a referral link or a phone bookmark. The admin console is
+ * deliberately one level in, reached from the marker in the corner.
+ */
+export const PARTNER_LOGIN_PATH = "/";
+export const PARTNER_HOME_PATH = "/partner";
+
+/** The partner portal, which uses a claim rather than the admin session cookie. */
+export const PARTNER_PATH_PREFIX = "/partner";
+
+export const LOGIN_PATH = "/admin/login";
 export const DEFAULT_ADMIN_PATH = "/dashboard";
 
 /** Most list callables cap `limit` at 200; the ones that document it say 1–200. */

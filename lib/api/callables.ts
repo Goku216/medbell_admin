@@ -13,6 +13,9 @@ import type {
 import type {
   AdminStatus,
   AppUserDetail,
+  CreatePartnerLoginResponse,
+  GetPartnerLoginResponse,
+  UpdatePartnerLoginResponse,
   GetPartnerResponse,
   GetReferralConfigResponse,
   ListAppUsersResponse,
@@ -148,6 +151,47 @@ export const updateReferralConfig = call<
   },
   { config: ReferralConfigDoc }
 >("updateReferralConfig");
+
+/* ----------------------------------------------------- partner portal logins */
+
+export const getPartnerLogin = call<{ partnerId: string }, GetPartnerLoginResponse>(
+  "getPartnerLogin",
+);
+
+/**
+ * One partner, one login: throws `failed-precondition` if one already exists.
+ * To change it use update; to replace it, delete then create.
+ *
+ * The password minimum is 8 rather than the 6 app users get — this login reads
+ * money. The server lowercases and trims the username before validating, so the
+ * normalised value is what comes back.
+ */
+export const createPartnerLogin = call<
+  { partnerId: string; username: string; password: string; displayName?: string },
+  CreatePartnerLoginResponse
+>("createPartnerLogin");
+
+/**
+ * Every field optional; only keys actually present are applied, so send just
+ * what the operator changed. Throws `invalid-argument` "Nothing to update." if
+ * none of the three is present.
+ *
+ * `disabled: true` blocks sign-in immediately and is fully reversible — the
+ * right control for suspending access, rather than deleting.
+ */
+export const updatePartnerLogin = call<
+  { partnerId: string; username?: string; password?: string; disabled?: boolean },
+  UpdatePartnerLoginResponse
+>("updatePartnerLogin");
+
+/**
+ * Removes only the ability to sign in. The partner, their codes, their
+ * customers and every commission they have earned are untouched.
+ */
+export const deletePartnerLogin = call<
+  { partnerId: string },
+  { partnerId: string; deleted: true }
+>("deletePartnerLogin");
 
 /* ---------------------------------------------------------------- partners */
 

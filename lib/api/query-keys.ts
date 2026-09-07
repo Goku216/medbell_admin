@@ -27,6 +27,7 @@ export const queryKeys = {
     partner: (partnerId: string) => ["referral", "partner", partnerId] as const,
     partnerAnalytics: (partnerId: string) =>
       ["referral", "partner", partnerId, "analytics"] as const,
+    partnerLogin: (partnerId: string) => ["referral", "partner", partnerId, "login"] as const,
     partnerSubscriptions: (partnerId: string, limit: number) =>
       ["referral", "partner", partnerId, "subscriptions", limit] as const,
 

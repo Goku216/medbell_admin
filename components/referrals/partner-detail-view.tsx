@@ -17,6 +17,7 @@ import { PLAN_LABELS } from "@/lib/constants";
 
 import { AuditView } from "@/components/referrals/audit-view";
 import { BalancesPanel } from "@/components/referrals/balances-panel";
+import { PartnerLoginPanel } from "@/components/referrals/partner-login-panel";
 import { PartnerStatusControl } from "@/components/referrals/partner-status-control";
 import { ReferredCustomersView } from "@/components/referrals/referred-customers-view";
 import { CodeFormDialog } from "@/components/referrals/code-form-dialog";
@@ -179,6 +180,7 @@ export function PartnerDetailView({ partnerId }: { partnerId: string }) {
           <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
           <TabsTrigger value="payouts">Payouts</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="login">Portal login</TabsTrigger>
           <TabsTrigger value="audit">Audit</TabsTrigger>
         </TabsList>
 
@@ -305,6 +307,14 @@ export function PartnerDetailView({ partnerId }: { partnerId: string }) {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="login">
+          {partner.data ? (
+            <PartnerLoginPanel partner={partner.data.partner} />
+          ) : (
+            <Skeleton className="h-64 w-full rounded-xl" />
+          )}
         </TabsContent>
 
         <TabsContent value="audit">

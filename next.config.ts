@@ -1,6 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  /**
+   * The administrator sign-in moved from /login to /admin/login when the home
+   * page became the partner sign-in. Kept as a redirect so existing bookmarks
+   * still land somewhere useful. Not permanent: a 308 would be cached in
+   * browsers long after anyone cared.
+   */
+  async redirects() {
+    return [{ source: "/login", destination: "/admin/login", permanent: false }];
+  },
+
   serverExternalPackages: ["firebase-admin", "jwks-rsa", "jose"],
 
   async headers() {

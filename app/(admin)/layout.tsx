@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 
+import { AdminAuthProvider } from "@/components/auth/admin-auth-provider";
 import { AppShell } from "@/components/layout/app-shell";
 import { getAdminSession } from "@/lib/auth/session";
 import { LOGIN_PATH } from "@/lib/constants";
@@ -21,8 +22,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   return (
-    <AppShell admin={{ email: session.email, name: session.name, picture: session.picture }}>
-      {children}
-    </AppShell>
+    <AdminAuthProvider>
+      <AppShell admin={{ email: session.email, name: session.name, picture: session.picture }}>
+        {children}
+      </AppShell>
+    </AdminAuthProvider>
   );
 }

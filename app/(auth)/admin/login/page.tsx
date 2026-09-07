@@ -4,7 +4,10 @@ import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/login-form";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export const metadata: Metadata = { title: "Sign in" };
+export const metadata: Metadata = {
+  title: "Administrator sign in",
+  robots: { index: false, follow: false },
+};
 
 export default function LoginPage() {
   return (

@@ -6,7 +6,6 @@ import { ThemeProvider } from "next-themes";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
-import { AdminAuthProvider } from "@/components/auth/admin-auth-provider";
 import { CallableError } from "@/lib/api/callable-error";
 
 function makeQueryClient() {
@@ -47,6 +46,15 @@ function getQueryClient() {
   return browserQueryClient;
 }
 
+/**
+ * App-wide providers only.
+ *
+ * The auth providers deliberately live further down, per route group: the admin
+ * console and the partner portal are different audiences with different
+ * credentials, and mounting both against the same Firebase auth instance made
+ * them fight — a partner signing out would have been redirected to the admin
+ * sign-in page by the admin provider's listener.
+ */
 export function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
 
@@ -58,10 +66,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         enableSystem
         disableTransitionOnChange
       >
-        <AdminAuthProvider>
-          <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
-          <Toaster />
-        </AdminAuthProvider>
+        <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+        <Toaster />
       </ThemeProvider>
     </QueryClientProvider>
   );
