@@ -8,6 +8,7 @@ import {
   usePartner,
   usePartnerAnalytics,
   usePartnerSubscriptions,
+  useReferralConfig,
 } from "@/hooks/use-referrals";
 import { errorMessage } from "@/lib/api/callable-error";
 import { formatDate, formatNumber, formatPercent, titleCase } from "@/lib/format";
@@ -16,6 +17,7 @@ import { PLAN_LABELS } from "@/lib/constants";
 
 import { AuditView } from "@/components/referrals/audit-view";
 import { BalancesPanel } from "@/components/referrals/balances-panel";
+import { PartnerStatusControl } from "@/components/referrals/partner-status-control";
 import { ReferredCustomersView } from "@/components/referrals/referred-customers-view";
 import { CodeFormDialog } from "@/components/referrals/code-form-dialog";
 import { PartnerFormDialog } from "@/components/referrals/partner-form-dialog";
@@ -49,6 +51,7 @@ import {
 export function PartnerDetailView({ partnerId }: { partnerId: string }) {
   const partner = usePartner(partnerId);
   const analytics = usePartnerAnalytics(partnerId);
+  const config = useReferralConfig();
   const [editOpen, setEditOpen] = React.useState(false);
 
   if (partner.isError) {
@@ -90,15 +93,19 @@ export function PartnerDetailView({ partnerId }: { partnerId: string }) {
           </div>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setEditOpen(true)}
-          disabled={!partner.data}
-        >
-          <Pencil />
-          Edit partner
-        </Button>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {partner.data ? <PartnerStatusControl partner={partner.data.partner} /> : null}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditOpen(true)}
+            disabled={!partner.data}
+          >
+            <Pencil />
+            Edit partner
+          </Button>
+        </div>
       </div>
 
       {analytics.isError ? (
@@ -203,9 +210,10 @@ export function PartnerDetailView({ partnerId }: { partnerId: string }) {
                     <TableRow>
                       <TableHead>Plan</TableHead>
                       <TableHead className="text-right">Discount</TableHead>
+                      <TableHead>Play offer id</TableHead>
+                      <TableHead>App Store offer id</TableHead>
+                      <TableHead>App Store product id</TableHead>
                       <TableHead>Discounted products</TableHead>
-                      <TableHead>Play offer</TableHead>
-                      <TableHead>App Store offer</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -217,14 +225,23 @@ export function PartnerDetailView({ partnerId }: { partnerId: string }) {
                         <TableCell className="tabular text-right">
                           {formatPercent(discount.percent, 0)}
                         </TableCell>
-                        <TableCell className="max-w-64 truncate font-mono text-xs">
-                          {discount.discountedProductIds?.join(", ") || "—"}
-                        </TableCell>
                         <TableCell className="font-mono text-xs">
                           {discount.androidOfferId ?? "—"}
                         </TableCell>
                         <TableCell className="font-mono text-xs">
-                          {discount.iosOfferId ?? "—"}
+                          {plan === "lifetime" ? (
+                            <span className="font-sans text-muted-foreground">
+                              Not applicable
+                            </span>
+                          ) : (
+                            (discount.iosOfferId ?? "—")
+                          )}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {discount.iosProductId ?? "—"}
+                        </TableCell>
+                        <TableCell className="max-w-56 truncate font-mono text-xs">
+                          {discount.discountedProductIds?.join(", ") || "—"}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -299,6 +316,7 @@ export function PartnerDetailView({ partnerId }: { partnerId: string }) {
         open={editOpen}
         onOpenChange={setEditOpen}
         partner={partner.data?.partner ?? null}
+        defaultPercents={config.data?.defaults.planDiscountPercents}
       />
     </>
   );

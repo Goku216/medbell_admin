@@ -53,6 +53,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = React.useState<AuthStatus>("loading");
   const lastSyncedToken = React.useRef<string | null>(null);
   const hadUser = React.useRef(false);
+  const hasForcedRefresh = React.useRef(false);
 
   // Derived from environment, so it is known during render. A missing
   // NEXT_PUBLIC_FIREBASE_* value then surfaces as a readable message on the
@@ -87,10 +88,23 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       setStatus("authenticated");
 
       try {
-        const token = await nextUser.getIdToken();
-        if (token !== lastSyncedToken.current) {
-          await establishServerSession(token);
-          lastSyncedToken.current = token;
+        // Read the cached token first so the UI is not blocked, then force a
+        // refresh once per session. A claim granted after the current token was
+        // minted is not in it, and the token only rotates about hourly on its
+        // own — without this, a freshly-granted admin sees permission-denied.
+        const cached = await nextUser.getIdToken();
+        if (cached !== lastSyncedToken.current) {
+          await establishServerSession(cached);
+          lastSyncedToken.current = cached;
+        }
+
+        if (!hasForcedRefresh.current) {
+          hasForcedRefresh.current = true;
+          const fresh = await nextUser.getIdToken(true);
+          if (fresh !== lastSyncedToken.current) {
+            await establishServerSession(fresh);
+            lastSyncedToken.current = fresh;
+          }
         }
       } catch {
         // A refresh that cannot be mirrored to the cookie is not fatal on its
@@ -125,6 +139,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = React.useCallback(async () => {
     hadUser.current = false;
+    hasForcedRefresh.current = false;
     await clearServerSession();
     await firebaseSignOut(getFirebaseAuth());
     lastSyncedToken.current = null;

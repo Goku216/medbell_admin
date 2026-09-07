@@ -6,7 +6,8 @@ import { ArrowLeft, Ban, BadgeCheck, LoaderCircle, Pencil, Trash } from "lucide-
 import { toast } from "sonner";
 
 import { useAppUser, usePatientRecord, useUpdateAppUser } from "@/hooks/use-users";
-import { errorMessage } from "@/lib/api/callable-error";
+import { useAdminAuth } from "@/components/auth/admin-auth-provider";
+import { mutationMessage } from "@/lib/api/callable-error";
 import { POLICY_NOTES } from "@/lib/constants";
 import { initialsOf, titleCase } from "@/lib/format";
 
@@ -38,6 +39,12 @@ export function UserDetailView({ uid }: { uid: string }) {
   const user = useAppUser(uid);
   const patient = usePatientRecord(uid);
   const update = useUpdateAppUser();
+  const { user: signedInAdmin } = useAdminAuth();
+
+  // The backend refuses to disable or delete your own account. Disabling the
+  // controls and saying why beats letting an operator click into an error.
+  const isSelf = signedInAdmin?.uid === uid;
+  const selfHint = isSelf ? "You cannot do this to your own account." : undefined;
 
   const [editOpen, setEditOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
@@ -57,7 +64,7 @@ export function UserDetailView({ uid }: { uid: string }) {
     } catch (caught) {
       // The backend refuses to let an admin disable their own account, and
       // says so; show that message rather than a generic failure.
-      toast.error(errorMessage(caught));
+      toast.error(mutationMessage(caught));
     }
   }
 
@@ -65,7 +72,7 @@ export function UserDetailView({ uid }: { uid: string }) {
     return (
       <>
         <BackLink />
-        <ErrorState message={errorMessage(user.error)} onRetry={() => void user.refetch()} />
+        <ErrorState message={mutationMessage(user.error)} onRetry={() => void user.refetch()} />
       </>
     );
   }
@@ -124,13 +131,20 @@ export function UserDetailView({ uid }: { uid: string }) {
             variant="outline"
             size="sm"
             onClick={() => void toggleDisabled()}
-            disabled={!detail || update.isPending}
+            disabled={!detail || update.isPending || isSelf}
+            title={selfHint}
           >
             {update.isPending ? <LoaderCircle className="animate-spin" /> : <Ban />}
             {detail?.disabled ? "Enable" : "Disable"}
           </Button>
 
-          <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setDeleteOpen(true)}
+            disabled={isSelf}
+            title={selfHint}
+          >
             <Trash />
             Delete
           </Button>

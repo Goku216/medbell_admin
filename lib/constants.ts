@@ -46,6 +46,7 @@ export const PLAN_LABELS: Record<string, string> = {
 
 /** Commission applies to every successful transaction, renewals included. */
 export const DEFAULT_COMMISSION_PERCENT = 10;
+export const DEFAULT_COMMISSION_BASE = "gross" as const;
 
 /**
  * pending -> approved -> paid, plus reversed (refund), cancelled (written off)
@@ -75,6 +76,49 @@ export type CommissionBase = (typeof COMMISSION_BASES)[number];
 
 export const PAYOUT_METHODS = ["bank_transfer", "upi", "paypal", "cheque", "other"] as const;
 
+/**
+ * Server-side length caps, mirrored here so the operator is stopped by the form
+ * rather than by a callable rejection.
+ */
+export const FIELD_LIMITS = {
+  partnerName: 120,
+  companyName: 160,
+  contactEmail: 320,
+  contactPhone: 40,
+  notes: 2000,
+  offeringId: 120,
+  payoutMethod: 60,
+  payoutDetails: 500,
+  referralCode: 24,
+  androidOfferId: 120,
+  iosProductId: 200,
+  iosOfferId: 200,
+  discountedProductIds: 20,
+  uid: 128,
+} as const;
+
+export const MAX_REDEMPTIONS_LIMIT = 10_000_000;
+
+/** The programme default offering, used when a partner leaves offeringId blank. */
+export const DEFAULT_OFFERING_ID = "referral_discount";
+
+/** Applied server-side when a lifetime iosProductId is left blank. */
+export const DEFAULT_LIFETIME_PRODUCT_ID = "medbell_lifetime_ref10";
+
+/**
+ * The plans the backend actually reads out of `planDiscounts`. Any other key is
+ * silently ignored, so `weekly` must never be sent.
+ */
+export const DISCOUNT_PLAN_ORDER = ["monthly", "yearly", "lifetime"] as const;
+export type DiscountPlan = (typeof DISCOUNT_PLAN_ORDER)[number];
+
+/**
+ * Lifetime is a non-consumable, and the App Store has no promotional offers for
+ * non-consumables — its iOS discount is a separate product instead. Offering the
+ * field would invite an operator to fill in something that can never work.
+ */
+export const PLANS_WITH_IOS_OFFER: DiscountPlan[] = ["monthly", "yearly"];
+
 export const USER_ROLES = ["patient", "caregiver"] as const;
 
 /**
@@ -94,4 +138,10 @@ export const POLICY_NOTES = {
     "This edits the settlement record only. It never changes the payout amount or the underlying commission rows — voiding is the only thing that moves money back.",
   selfAction:
     "The backend refuses to let an admin disable, delete or de-admin their own account.",
+  planDiscountsFullSend:
+    "Saved as a complete set. The backend merges per field, so a form that sent only what changed could never clear a value — this sends all three plans every time.",
+  codeOverride:
+    "An un-overridden plan inherits the partner's rate, so a later change to the partner follows through. Overriding pins it, even if the partner's rate moves.",
+  deactivatePartner:
+    "Deactivating a partner also deactivates every one of their referral codes. Existing attribution and commission history are untouched.",
 } as const;

@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 
-import { usePartners } from "@/hooks/use-referrals";
+import { usePartners, useReferralConfig } from "@/hooks/use-referrals";
 import { useLimit } from "@/hooks/use-limit";
 import { errorMessage } from "@/lib/api/callable-error";
 import { formatDate, formatPercent, titleCase } from "@/lib/format";
@@ -34,6 +34,7 @@ export function PartnersView() {
 
   const { limit, raise, atCap } = useLimit();
   const query = usePartners({ limit });
+  const config = useReferralConfig();
 
   // listPartners has no search parameter, so filtering is done here over what
   // the server returned — and the UI says so rather than implying a full search.
@@ -190,7 +191,12 @@ export function PartnersView() {
         </CardContent>
       </Card>
 
-      <PartnerFormDialog open={formOpen} onOpenChange={setFormOpen} partner={editing} />
+      <PartnerFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        partner={editing}
+        defaultPercents={config.data?.defaults.planDiscountPercents}
+      />
     </>
   );
 }

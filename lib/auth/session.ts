@@ -15,13 +15,18 @@ export type AdminSession = {
 };
 
 export class AdminAuthError extends Error {
+  readonly status: 401 | 403;
+  readonly code: "unauthenticated" | "permission-denied";
+
   constructor(
     message: string,
-    readonly status: 401 | 403,
-    readonly code: "unauthenticated" | "permission-denied",
+    status: 401 | 403,
+    code: "unauthenticated" | "permission-denied",
   ) {
     super(message);
     this.name = "AdminAuthError";
+    this.status = status;
+    this.code = code;
   }
 }
 

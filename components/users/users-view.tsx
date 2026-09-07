@@ -144,9 +144,15 @@ export function UsersView() {
 
                       <TableCell>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm">
-                            {titleCase(user.profile?.role ?? null, "—")}
-                          </span>
+                          {/* An Auth account with no profile document is a real
+                              state, not blank fields — say so. */}
+                          {user.profile === null ? (
+                            <Badge variant="warning">No profile</Badge>
+                          ) : (
+                            <span className="text-sm">
+                              {titleCase(user.profile.role ?? null, "—")}
+                            </span>
+                          )}
                           {user.isAdmin ? <Badge variant="default">Admin</Badge> : null}
                         </div>
                       </TableCell>

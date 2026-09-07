@@ -88,7 +88,15 @@ export function ProfileCard({
           </CardDescription>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="space-y-4">
+          {profile === null ? (
+            <PolicyNote>
+              This account exists in Firebase Auth but has no profile document — they signed up
+              and never completed onboarding, or the profile was deleted. The profile fields
+              below are empty for that reason, not because the data failed to load.
+            </PolicyNote>
+          ) : null}
+
           <DefinitionList
             columns={3}
             items={[

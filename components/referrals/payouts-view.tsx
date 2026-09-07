@@ -7,13 +7,15 @@ import { usePartnerPayouts } from "@/hooks/use-referrals";
 import { useLimit } from "@/hooks/use-limit";
 import { errorMessage } from "@/lib/api/callable-error";
 import { POLICY_NOTES } from "@/lib/constants";
-import { formatDate, formatNumber, titleCase } from "@/lib/format";
+import { formatDate, formatDateTime, formatNumber, titleCase } from "@/lib/format";
+import type { CsvColumn } from "@/lib/csv";
 import type { PartnerPayout } from "@/lib/api/types";
 
 import { EditPayoutDialog, VoidPayoutDialog } from "@/components/referrals/payout-dialogs";
 import { PartnerPicker } from "@/components/referrals/partner-picker";
 import { LimitFooter } from "@/components/common/load-more";
 import { Money } from "@/components/common/money";
+import { ExportCsvButton } from "@/components/common/export-csv-button";
 import { PageHeader } from "@/components/common/page-header";
 import { PolicyNote } from "@/components/common/policy-note";
 import { StatusBadge } from "@/components/common/status-badge";
@@ -49,6 +51,13 @@ export function PayoutsView({ partnerId: fixedPartnerId }: { partnerId?: string 
           <PageHeader
             title="Payouts"
             description="Settlements recorded against commission rows, listed per partner."
+            actions={
+              <ExportCsvButton
+                rows={payouts}
+                columns={PAYOUT_COLUMNS}
+                filenamePrefix="payouts"
+              />
+            }
           />
           <PolicyNote variant="locked">
             {POLICY_NOTES.serverComputedPayout} {POLICY_NOTES.settlementOnly}
@@ -214,3 +223,18 @@ export function PayoutsView({ partnerId: fixedPartnerId }: { partnerId?: string 
     </>
   );
 }
+
+const PAYOUT_COLUMNS: Array<CsvColumn<PartnerPayout>> = [
+  { header: "Payout id", value: (row) => row.id },
+  { header: "Partner id", value: (row) => row.partnerId },
+  { header: "Paid on", value: (row) => formatDateTime(row.paidOn ?? row.createdAt) },
+  { header: "Method", value: (row) => row.method },
+  { header: "Reference", value: (row) => row.reference },
+  { header: "Settlement status", value: (row) => (row.voided ? "void" : row.settlementStatus) },
+  { header: "Rows", value: (row) => row.count ?? row.transactionIds?.length ?? 0 },
+  { header: "Currency", value: (row) => row.currency },
+  { header: "Computed (minor)", value: (row) => row.amountMinor },
+  { header: "Settled (minor)", value: (row) => row.settledAmountMinor },
+  { header: "Void reason", value: (row) => row.voidReason },
+  { header: "Notes", value: (row) => row.notes },
+];

@@ -107,7 +107,19 @@ export const updateAppUser = call<
   { uid: string; updated: true }
 >("updateAppUser");
 
-/** Refuses to delete your own account. Keeps all clinical records. */
+/**
+ * Refuses to delete your own account.
+ *
+ * Deletes the profile document first — which fires cleanupDeletedUser to clear
+ * care relationships and connection requests — then the Auth account. If the
+ * Auth deletion fails after the profile is gone it throws `internal` with a
+ * message naming that half-failure; the recovery is a console deletion, not a
+ * retry, so that message must reach the operator intact.
+ *
+ * Medications, dose logs, vitals, vital reminder plans and appointments are
+ * deliberately kept: a medication log is a health record, and a caregiver may
+ * still need the history.
+ */
 export const deleteAppUser = call<{ uid: string }, { uid: string; deleted: true }>(
   "deleteAppUser",
 );
@@ -165,7 +177,12 @@ type PartnerFields = {
   planDiscounts?: PlanDiscountMap;
 };
 
-/** Can create the partner's first code in the same call. */
+/**
+ * Can create the partner's first code in the same call.
+ *
+ * `primaryCurrency` is fixed after creation — balances are keyed by it — so it
+ * appears here and not on updatePartner.
+ */
 export const createPartner = call<
   PartnerFields & {
     name: string;
@@ -205,13 +222,20 @@ export const createReferralCode = call<
   { code: string; referralLink: string }
 >("createReferralCode");
 
-/** Keyed by `code`. The owning partner is not updatable, by design. */
+/**
+ * Keyed by `code`. The owning partner is deliberately not updatable — moving a
+ * code between partners would silently re-point every future renewal commission.
+ *
+ * `commissionPercent: null` and `planDiscounts: null` clear the code's overrides
+ * so it inherits the partner's values again; those are distinct operations from
+ * sending a value.
+ */
 export const updateReferralCode = call<
   {
     code: string;
     status?: PartnerStatus;
-    commissionPercent?: number;
-    planDiscounts?: PlanDiscountMap;
+    commissionPercent?: Clearable<number>;
+    planDiscounts?: Clearable<PlanDiscountMap>;
     offeringId?: Clearable<string>;
     maxRedemptions?: Clearable<number>;
     validFrom?: Clearable<DateInput>;

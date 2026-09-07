@@ -41,9 +41,9 @@ issues one for an ID token Google signed that already carries the claim.
 
 ## Read and write paths
 
-Everything is typed from [docs/ADMIN_API.md](docs/ADMIN_API.md), which was
-written from the deployed source. Where this console disagreed with that
-document, the document won.
+Everything is typed from [docs/ADMIN_API.md](docs/ADMIN_API.md) — the contract —
+and built to [docs/WEB_ADMIN_PARITY.md](docs/WEB_ADMIN_PARITY.md) — the work
+order. Where the two disagree, `ADMIN_API.md` wins, as it says itself.
 
 **Reads** are split by what the data is:
 
@@ -119,6 +119,34 @@ and arrays. Direct Firestore reads are the exception — they hand back
 normalises them to the same convention and the client has one representation
 rather than three.
 
+## Store identifiers are the mechanism, not metadata
+
+The app never computes a discount: it asks the store for a *named offer*. Those
+names are `androidOfferId` and `iosOfferId`, and a blank or wrong one means the
+discount simply never appears on that platform. Three things follow, all
+implemented in [lib/api/plan-discounts.ts](lib/api/plan-discounts.ts):
+
+- **The two stores' formats are mutually exclusive.** App Store ids allow
+  letters, digits, dots and underscores but no hyphens; Play ids allow lowercase
+  letters, digits and hyphens but no underscores. Each field is validated
+  against its own rule and names the *other* store when the value looks like
+  it was pasted from there — that swap is the most expensive failure mode in the
+  system, because the form saves cleanly and the discount silently never shows.
+- **Discounts are always sent as a complete set.** The backend merges per field:
+  an absent plan keeps its stored value, an absent field keeps its stored value,
+  and only an explicit `null` clears one. A form sending only what changed would
+  appear to work and could never clear anything.
+- **Lifetime has no App Store promotional offer field.** It is a non-consumable
+  and the App Store has none for those; its iOS discount is a separate product
+  named in `iosProductId`. The field is hidden, and `iosOfferId` is forced to
+  `null` for lifetime on the way out so a stale value cannot survive.
+
+> **Before debugging the form:** the referral functions carrying `iosOfferId`
+> may not be deployed. If a saved value comes back empty, check that
+> `updatePartner`, `createPartner`, `getPartner`, `listPartners`,
+> `createReferralCode` and `updateReferralCode` have been redeployed — the panel
+> will otherwise hit the same wall the app's own form does.
+
 ## Rules the UI states because the backend enforces them
 
 - Discount percentages and the commission rate come from `getReferralConfig`
@@ -135,7 +163,16 @@ rather than three.
   and at most 400 rows go in one call.
 - Admin access to patient data is read-only; `deleteAppUser` removes the account
   and profile but preserves medications, dose logs, vitals and appointments.
-- The backend refuses to let an admin disable, delete or de-admin themselves.
+- The backend refuses to let an admin disable, delete or de-admin themselves, so
+  those controls are disabled on your own account with a tooltip rather than
+  letting you click into an error.
+- Deleting a user removes the profile *before* the Auth record. If the second
+  step fails, the callable says so and the fix is a console deletion, not a
+  retry — that message reaches the operator intact.
+- A code's owning partner is not editable: moving one would re-point every
+  future renewal commission.
+- Code-level overrides are all-or-nothing. The merge rules make per-plan
+  clearing impossible, so the UI offers one toggle and says why.
 
 ## Local setup
 
@@ -169,9 +206,10 @@ pnpm lint     # ESLint (flat config)
 pnpm test     # contract tests (Node's built-in runner, no extra dependency)
 ```
 
-`pnpm test` covers the three places where a silent regression would be
-expensive: integer-paise arithmetic and parsing, the omit-vs-clear patch
-semantics of the update callables, and the epoch-millis timestamp contract
-(including the adherence window). It runs project modules directly via
+`pnpm test` covers the places where a silent regression would be expensive:
+integer-minor-unit arithmetic and parsing, the omit-vs-clear patch semantics of
+the update callables, the epoch-millis timestamp contract (including the
+adherence window), the store-identifier rules and full-set discount payload, the
+error-code mapping, and CSV escaping. It runs project modules directly via
 `--experimental-strip-types` plus a small `@/` alias resolver in
 [scripts/](scripts/), so the tests import exactly what the app imports.

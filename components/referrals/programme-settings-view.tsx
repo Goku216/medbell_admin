@@ -5,16 +5,19 @@ import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { useReferralConfig, useUpdateReferralConfig } from "@/hooks/use-referrals";
-import { errorMessage } from "@/lib/api/callable-error";
+import { errorMessage, mutationMessage } from "@/lib/api/callable-error";
 import { PLAN_LABELS, POLICY_NOTES } from "@/lib/constants";
 import { formatPercent, titleCase } from "@/lib/format";
-import { formatMinor } from "@/lib/money";
 import { omitUndefined, requiredTextChange } from "@/lib/api/patch";
 import type { GetReferralConfigResponse } from "@/lib/api/types";
 
+import Link from "next/link";
+
+import { ListPricesEditor } from "@/components/referrals/list-prices-editor";
+import { ProductPlanEditor } from "@/components/referrals/product-plan-editor";
 import { PageHeader } from "@/components/common/page-header";
 import { PolicyNote } from "@/components/common/policy-note";
-import { EmptyState, ErrorState } from "@/components/common/states";
+import { ErrorState } from "@/components/common/states";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,14 +30,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 /**
  * Programme configuration.
@@ -92,13 +87,11 @@ function SettingsView({ loaded }: { loaded: GetReferralConfigResponse }) {
       await update.mutateAsync(omitUndefined({ offeringId: change }));
       toast.success("Offering saved.");
     } catch (caught) {
-      setError(errorMessage(caught));
+      setError(mutationMessage(caught));
     }
   }
 
   const planRows = Object.keys(defaults.planDiscountPercents ?? {});
-  const productRows = Object.entries(config.productPlans ?? {});
-  const priceRows = Object.entries(config.listPrices ?? {});
 
   return (
     <>
@@ -178,71 +171,25 @@ function SettingsView({ loaded }: { loaded: GetReferralConfigResponse }) {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Product to plan mapping</CardTitle>
-          <CardDescription>
-            How a purchased product id resolves to a plan for discount and commission.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-0 pb-0">
-          {productRows.length === 0 ? (
-            <EmptyState className="m-5" title="No product mapping configured" />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product id</TableHead>
-                  <TableHead>Plan</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {productRows.map(([productId, plan]) => (
-                  <TableRow key={productId}>
-                    <TableCell className="font-mono text-xs">{productId}</TableCell>
-                    <TableCell>{PLAN_LABELS[plan] ?? titleCase(plan)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <ProductPlanEditor config={config} />
+
+      <ListPricesEditor config={config} />
 
       <Card>
         <CardHeader>
-          <CardTitle>List prices</CardTitle>
+          <CardTitle>Administrators</CardTitle>
           <CardDescription>
-            Stored as integer minor units, per plan and currency.
+            Console access is granted and revoked by email address.
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-0 pb-0">
-          {priceRows.length === 0 ? (
-            <EmptyState className="m-5" title="No list prices configured" />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Currency</TableHead>
-                  <TableHead className="text-right">List price</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {priceRows.flatMap(([plan, byCurrency]) =>
-                  Object.entries(byCurrency ?? {}).map(([currency, minor]) => (
-                    <TableRow key={`${plan}-${currency}`}>
-                      <TableCell>{PLAN_LABELS[plan] ?? titleCase(plan)}</TableCell>
-                      <TableCell className="text-muted-foreground">{currency}</TableCell>
-                      <TableCell className="tabular text-right">
-                        {formatMinor(minor, { currency })}
-                      </TableCell>
-                    </TableRow>
-                  )),
-                )}
-              </TableBody>
-            </Table>
-          )}
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            The <code className="font-mono">REFERRAL_ADMIN_EMAILS</code> environment variable is
+            a first-admin bootstrap only, not the ongoing mechanism.
+          </p>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admins">Manage console admins</Link>
+          </Button>
         </CardContent>
       </Card>
     </>

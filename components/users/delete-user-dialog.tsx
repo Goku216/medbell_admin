@@ -6,7 +6,7 @@ import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { useDeleteAppUser } from "@/hooks/use-users";
-import { errorMessage } from "@/lib/api/callable-error";
+import { mutationMessage } from "@/lib/api/callable-error";
 import { POLICY_NOTES } from "@/lib/constants";
 
 import { ErrorState } from "@/components/common/states";
@@ -71,11 +71,11 @@ function DeleteUserForm({
     setError(null);
     try {
       await remove.mutateAsync(uid);
-      toast.success("Account deleted. Clinical records were preserved.");
+      toast.success("Account deleted. Medications, logs, vitals and appointments were kept.");
       onDone();
       router.push("/users");
     } catch (caught) {
-      setError(errorMessage(caught));
+      setError(mutationMessage(caught));
     }
   }
 
@@ -84,11 +84,17 @@ function DeleteUserForm({
       <DialogHeader>
         <DialogTitle>Delete this account?</DialogTitle>
         <DialogDescription>
-          This removes the Firebase Auth account and the MedBell profile. It cannot be undone.
+          This removes the Firebase Auth account and the profile document. It cannot be undone.
         </DialogDescription>
       </DialogHeader>
 
-      <PolicyNote variant="locked">{POLICY_NOTES.deleteUser}</PolicyNote>
+      <div className="space-y-2">
+        <PolicyNote variant="locked">{POLICY_NOTES.deleteUser}</PolicyNote>
+        <PolicyNote>
+          If you only need to stop this person signing in, <strong>disable</strong> the account
+          instead — it takes effect immediately and is completely reversible.
+        </PolicyNote>
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="delete-confirm">

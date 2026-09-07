@@ -5,7 +5,7 @@ import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { useMarkCommissionsPaid } from "@/hooks/use-referrals";
-import { errorMessage } from "@/lib/api/callable-error";
+import { mutationMessage } from "@/lib/api/callable-error";
 import { MAX_PAYOUT_TRANSACTIONS, PAYOUT_METHODS, POLICY_NOTES } from "@/lib/constants";
 import { formatNumber, titleCase } from "@/lib/format";
 import { formatMinor, sumMinor } from "@/lib/money";
@@ -128,7 +128,7 @@ function MarkPaidForm({
       );
       onDone();
     } catch (caught) {
-      setError(errorMessage(caught));
+      setError(mutationMessage(caught));
     }
   }
 

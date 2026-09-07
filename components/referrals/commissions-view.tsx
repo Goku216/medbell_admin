@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { useCommissions, useReviewCommissions } from "@/hooks/use-referrals";
 import { useLimit } from "@/hooks/use-limit";
-import { errorMessage } from "@/lib/api/callable-error";
+import { errorMessage, mutationMessage } from "@/lib/api/callable-error";
 import {
   COMMISSION_STATUSES,
   PAYABLE_COMMISSION_STATUSES,
@@ -15,8 +15,9 @@ import {
   PLAN_LABELS,
   POLICY_NOTES,
 } from "@/lib/constants";
-import type { ListCommissionTransactionsRequest } from "@/lib/api/types";
-import { formatDate, formatNumber, titleCase } from "@/lib/format";
+import type { ListCommissionTransactionsRequest, ReferralTransaction } from "@/lib/api/types";
+import { formatDate, formatDateTime, formatNumber, titleCase } from "@/lib/format";
+import type { CsvColumn } from "@/lib/csv";
 import { sumMinor } from "@/lib/money";
 import type { CommissionStatus, PlanKind } from "@/lib/constants";
 
@@ -24,6 +25,7 @@ import { MarkPaidDialog } from "@/components/referrals/mark-paid-dialog";
 import { PartnerPicker } from "@/components/referrals/partner-picker";
 import { LimitFooter } from "@/components/common/load-more";
 import { Money } from "@/components/common/money";
+import { ExportCsvButton } from "@/components/common/export-csv-button";
 import { PageHeader } from "@/components/common/page-header";
 import { PolicyNote } from "@/components/common/policy-note";
 import { StatusBadge } from "@/components/common/status-badge";
@@ -120,7 +122,7 @@ export function CommissionsView() {
       );
       setSelected(new Set());
     } catch (caught) {
-      toast.error(errorMessage(caught));
+      toast.error(mutationMessage(caught));
     }
   }
 
@@ -152,6 +154,9 @@ export function CommissionsView() {
       <PageHeader
         title="Commission ledger"
         description="Every commission row the backend has recorded, including renewals at full price. Amounts are recomputed server-side on each review."
+        actions={
+          <ExportCsvButton rows={rows} columns={LEDGER_COLUMNS} filenamePrefix="commissions" />
+        }
       />
 
       <PolicyNote variant="locked">{POLICY_NOTES.serverComputedPayout}</PolicyNote>
@@ -453,3 +458,24 @@ export function CommissionsView() {
     </>
   );
 }
+
+/**
+ * Money is exported as stored integer minor units with its currency beside it,
+ * so the figures stay exact and summable in a spreadsheet.
+ */
+const LEDGER_COLUMNS: Array<CsvColumn<ReferralTransaction>> = [
+  { header: "Transaction id", value: (row) => row.id },
+  { header: "Event at", value: (row) => formatDateTime(row.eventAt ?? row.createdAt) },
+  { header: "Partner id", value: (row) => row.partnerId },
+  { header: "Code", value: (row) => row.code },
+  { header: "User id", value: (row) => row.userId },
+  { header: "Plan", value: (row) => row.plan },
+  { header: "Status", value: (row) => row.status },
+  { header: "First payment", value: (row) => (row.isFirstPayment === false ? "no" : "yes") },
+  { header: "Currency", value: (row) => row.currency },
+  { header: "Gross (minor)", value: (row) => row.grossMinor },
+  { header: "Discount (minor)", value: (row) => row.discountMinor },
+  { header: "Commission (minor)", value: (row) => row.commissionMinor },
+  { header: "Commission percent", value: (row) => row.commissionPercent },
+  { header: "Payout id", value: (row) => row.payoutId },
+];

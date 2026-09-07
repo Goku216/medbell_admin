@@ -5,7 +5,7 @@ import { LoaderCircle, ShieldCheck, ShieldOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAdminStatus, useSetAdminRole } from "@/hooks/use-referrals";
-import { errorMessage } from "@/lib/api/callable-error";
+import { errorMessage, mutationMessage } from "@/lib/api/callable-error";
 import { ADMIN_CLAIM, POLICY_NOTES } from "@/lib/constants";
 
 import { PageHeader } from "@/components/common/page-header";
@@ -61,7 +61,7 @@ export function AdminsView() {
       );
     } catch (caught) {
       // The backend refuses to revoke your own access and says so.
-      setError(errorMessage(caught));
+      setError(mutationMessage(caught));
     }
   }
 

@@ -5,7 +5,7 @@ import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { useUpdatePartnerPayout, useVoidPartnerPayout } from "@/hooks/use-referrals";
-import { errorMessage } from "@/lib/api/callable-error";
+import { mutationMessage } from "@/lib/api/callable-error";
 import { PAYOUT_METHODS, SETTLEMENT_STATUSES, POLICY_NOTES } from "@/lib/constants";
 import type { SettlementStatus } from "@/lib/constants";
 import { titleCase, toDateInputValue } from "@/lib/format";
@@ -111,7 +111,7 @@ function EditPayoutForm({ payout, onDone }: { payout: PartnerPayout; onDone: () 
       toast.success("Settlement record updated.");
       onDone();
     } catch (caught) {
-      setError(errorMessage(caught));
+      setError(mutationMessage(caught));
     }
   }
 
@@ -266,7 +266,7 @@ function VoidPayoutForm({ payout, onDone }: { payout: PartnerPayout; onDone: () 
       toast.success("Payout voided.");
       onDone();
     } catch (caught) {
-      setError(errorMessage(caught));
+      setError(mutationMessage(caught));
     }
   }
 
